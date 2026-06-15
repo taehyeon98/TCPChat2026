@@ -37,4 +37,42 @@ public class ChatServer
         _isRunning = true;
         Console.WriteLine($"서버 정상 실행. 포트번호 : {_port} ");
     }
+    
+    //서버 종료
+    public void StopServer()
+    {
+        if (!_isRunning)
+        {
+            return;
+        }
+        
+        _isRunning = false;
+        _listener?.Stop();
+        _listener = null;
+        
+        Console.WriteLine("서버 종료.");
+    }
+    
+    //클라이언트 연결(접속 요청,비동기방식 처리)
+    private async Task AcceptClientAsync()
+    {
+        Console.WriteLine("클라이언트 접속 대기중");
+        //무한루프 돌면서 접속요청 대기처리
+        while (_isRunning)
+        {
+            try
+            {
+                //클라이언트 연결 요청까지 대기
+                var client = await _listener!.AcceptTcpClientAsync();
+                
+                //연결된 클라이언트 정보 출력
+                var endPoint = client.Client.RemoteEndPoint;
+                Console.WriteLine($"[연결] 클라이언트가 접속했습니다. : {endPoint}");
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+            }
+        }
+    }
 }

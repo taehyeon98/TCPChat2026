@@ -24,7 +24,7 @@ class Program
         Console.WriteLine("서버 종료시 아무키 입력");
         Console.ReadKey(true);//입력한 키 값 Hook, 화면에 출력되지 않게 하는 옵션
         
-        //TODO:서버 정지 로직구현
-        Console.WriteLine("서버 종료.");
+        //서버 정지 로직구현
+        server.StopServer();
     }
 }
