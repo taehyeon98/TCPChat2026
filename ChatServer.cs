@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using System.Collections.Concurrent;
+using System.Net;
 using System.Net.Sockets;
 using System.Reflection.Metadata.Ecma335;
 
@@ -15,11 +16,15 @@ public class ChatServer
     //서버 포트
     private int _port;
     
+    //연결된 클라이언트 저장할 스레드 환경에서 사용할 Dic(Thread-safe dictionary)
+    private readonly ConcurrentDictionary<string, ConnectedClient> _connectedClients;
+    
     //생성자(Constructor)
     public ChatServer(int port)
     {
         _port = port;
         _isRunning = false;
+        _connectedClients = new ConcurrentDictionary<string, ConnectedClient>();
     }
     
     //서버 시작
@@ -35,6 +40,10 @@ public class ChatServer
         _listener = new TcpListener(IPAddress.Any,  _port);
         _listener.Start();//소켓 메서드
         _isRunning = true;
+        
+        //백그라운드 스레드로 클라이언트 연결 수락시작.
+        _ = Task.Run(AcceptClientAsync);
+        
         Console.WriteLine($"서버 정상 실행. 포트번호 : {_port} ");
     }
     
@@ -65,9 +74,18 @@ public class ChatServer
                 //클라이언트 연결 요청까지 대기
                 var client = await _listener!.AcceptTcpClientAsync();
                 
-                //연결된 클라이언트 정보 출력
-                var endPoint = client.Client.RemoteEndPoint;
-                Console.WriteLine($"[연결] 클라이언트가 접속했습니다. : {endPoint}");
+                //접속한 클라이언트 저장
+                var infoConnectedClient = new ConnectedClient(client);
+                //클라이언트 목록에 추가
+                //_connectedClients.TryAdd(키,값);
+                //Indexer방식
+                _connectedClients[infoConnectedClient.ClientId] = infoConnectedClient;
+
+                //클라이언트로 부터 메시지 수신 시작(비동기)
+                _ = Task.Run(infoConnectedClient.ReceiveMessageAsync);
+                
+                //접속한 클라이언트 수 출력
+                Console.WriteLine($"[정보] 현재 접속한 클라이언트 수 : {_connectedClients.Count}");
             }
             catch (Exception e)
             {
